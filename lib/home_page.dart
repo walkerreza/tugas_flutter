@@ -37,7 +37,7 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         centerTitle: true,
         title: const Text('Belanja Hemat dan Mudah'),
-        backgroundColor: Colors.blueAccent,
+        backgroundColor: const Color.fromARGB(255, 14, 107, 45),
       ),
 
       ///untuk drawer
@@ -48,7 +48,7 @@ class _HomePageState extends State<HomePage> {
           padding: EdgeInsets.zero,
           children: [
             UserAccountsDrawerHeader(
-              decoration: const BoxDecoration(color: Colors.blueAccent),
+              decoration: const BoxDecoration(color: Color.fromARGB(255, 77, 189, 43)),
               accountName: Text(
                 name ?? "Belum Login",
                 style: const TextStyle(fontWeight: FontWeight.bold),
@@ -57,7 +57,7 @@ class _HomePageState extends State<HomePage> {
                 email ?? "Belum Login",
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              currentAccountPicture: Image(image: AssetImage('img/akb.png')),
+              currentAccountPicture: Image.asset('lib/img/logo1.png'),
             ),
             if (isAdmin == false) ...[
               ListTile(

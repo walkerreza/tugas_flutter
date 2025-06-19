@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:baru/home_page.dart';
 import 'package:baru/splashscreen.dart';
 
 void main() {

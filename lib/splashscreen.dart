@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:baru/home_page.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+  const SplashScreen({Key? key}) : super(key: key);
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  _SplashScreenState createState() => _SplashScreenState();
 }
 
 class _SplashScreenState extends State<SplashScreen> {
@@ -14,7 +14,7 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
     Timer(
-      const Duration(seconds: 3),
+      const Duration(seconds: 2),
       () => Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const HomePage()),
@@ -24,19 +24,35 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Kamu bisa ganti pakai logo aplikasi kamu ya
-            FlutterLogo(size: 150),
-            SizedBox(height: 20),
-            Text(
-              'Selamat Datang!',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-          ],
+    return Scaffold(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color.fromARGB(255, 105, 184, 112),
+              Color.fromARGB(255, 167, 190, 168),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Center(
+          child: TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0.0, end: 1.0),
+            duration: const Duration(seconds: 2),
+            curve: Curves.easeOutBack,
+            builder: (BuildContext context, double scale, Widget? child) {
+              return Transform.scale(
+                scale: scale,
+                child: Opacity(
+                  opacity: scale,
+                  child: Image.asset('lib/img/logo1.png'),
+                ),
+              );
+            },
+          ),
         ),
       ),
     );

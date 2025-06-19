@@ -3,6 +3,10 @@ import 'package:baru/constants.dart';
 import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+
+
 
 class EditForm extends StatefulWidget {
   const EditForm({super.key, this.idBarang});
@@ -20,7 +24,7 @@ class _EditFormState extends State<EditForm> {
   TextEditingController hargaProdukController = TextEditingController();
   TextEditingController deskripsiProdukController = TextEditingController();
   String? gambar;
-  @override
+    @override
   void initState() {
     // TODO: implement initState
     super.initState();
@@ -60,6 +64,13 @@ class _EditFormState extends State<EditForm> {
               controller: deskripsiProdukController,
               decoration: const InputDecoration(labelText: "Deskripsi"),
             ),
+        ElevatedButton.icon(
+              onPressed: pickImage,
+              icon: const Icon(Icons.image),
+              label: const Text('Pilih Gambar'),
+            ),
+            if (gambar != null)
+              Image.file(File(gambar!), height: 100),
             const SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -82,6 +93,16 @@ class _EditFormState extends State<EditForm> {
         ),
       ),
     );
+  }
+
+
+  Future<void> pickImage() async {
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        gambar = pickedFile.path;
+      });
+    }
   }
 
   Future<void> ambilDataEdit(String id) async {
