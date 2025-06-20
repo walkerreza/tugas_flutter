@@ -79,13 +79,33 @@ class _EditFormState extends State<EditForm> {
                   onPressed: () {
                     onSubmit(id!);
                   },
-                  child: const Text('Edit'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF5B5B),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                  ),
+                  child: const Text('Simpan', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    onSubmit(id!);
+                    // Reset form fields
+                    setState(() {
+                      namaController.clear();
+                      kategoriController.clear();
+                      beratController.clear();
+                      stokController.clear();
+                      hargaProdukController.clear();
+                      deskripsiProdukController.clear();
+                    });
+                    // Reload data
+                    ambilDataEdit(id!);
                   },
-                  child: const Text('Clear'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey[300],
+                    foregroundColor: Colors.black87,
+                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                  ),
+                  child: const Text('Reset', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -97,65 +117,102 @@ class _EditFormState extends State<EditForm> {
 
 
   Future<void> pickImage() async {
-    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      setState(() {
-        gambar = pickedFile.path;
-      });
+    try {
+      final pickedFile = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80, // Kompresi gambar untuk mengurangi ukuran
+      );
+      if (pickedFile != null) {
+        setState(() {
+          gambar = pickedFile.path;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal memilih gambar: $e')),
+      );
     }
   }
 
   Future<void> ambilDataEdit(String id) async {
-    final response = await http.get(Uri.parse('$baseUrl/editApi/$id'));
-    if (response.statusCode == 200) {
-      final user = json.decode(response.body)['user'];
-      //print(user['berat']);
-      namaController.text = user['nama_produk'];
-      //var katergori = user['id_kategori'];
-      kategoriController.text = user['id_kategori'].toString();
-      beratController.text = user['berat'];
-      stokController.text = user['stok'].toString();
-      hargaProdukController.text = user['harga_produk'].toString();
-      deskripsiProdukController.text = user['deskripsi_produk'];
-      gambar = user['foto_produk'];
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/editApi/$id'));
+      if (response.statusCode == 200) {
+        final user = json.decode(response.body)['user'];
+        //print(user['berat']);
+        setState(() {
+          namaController.text = user['nama_produk'];
+          //var katergori = user['id_kategori'];
+          kategoriController.text = user['id_kategori'].toString();
+          beratController.text = user['berat'];
+          stokController.text = user['stok'].toString();
+          hargaProdukController.text = user['harga_produk'].toString();
+          deskripsiProdukController.text = user['deskripsi_produk'];
+          gambar = user['foto_produk'];
+        });
+      } else {
+        throw Exception('Gagal mengambil data: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
     }
   }
 
   Future<void> onSubmit(String id) async {
-    //print("jalan edit");
-    final response = await http.put(
-      Uri.parse('$baseUrl/updateApi/$id'),
-      headers: {'Content-Type': 'application/json; charset=UTF-8'},
-      body: jsonEncode({
-        "nama_produk": namaController.text,
-        "kategori_produk": kategoriController.text,
-        "berat_produk": beratController.text,
-        "stok_produk": stokController.text,
-        "harga_produk": hargaProdukController.text,
-        "deskripsi_produk": deskripsiProdukController.text,
-        "img1": gambar,
-      }),
-    );
-    print(response.statusCode);
-    //var status = response.body.contains('error');
-    if (response.statusCode == 200) {
-      // If the server did return a 200 OK response,
-      // then parse the JSON.
-      final result = json.decode(response.body);
-      print(response);
-      if (!mounted) return; // Cek apakah context masih aktif
-      showDialog(
-        context: context,
-        builder: (_) => const AlertDialog(
-          title: Text('Pesan'),
-          content: Text(
-            'Data Berhasil disimpan, Silahkan kembali ke Menu Utama',
-          ),
-        ),
+    try {
+      // Validasi input
+      if (namaController.text.isEmpty) {
+        throw Exception('Nama produk tidak boleh kosong');
+      }
+      
+      final response = await http.put(
+        Uri.parse('$baseUrl/updateApi/$id'),
+        headers: {'Content-Type': 'application/json; charset=UTF-8'},
+        body: jsonEncode({
+          "nama_produk": namaController.text,
+          "kategori_produk": kategoriController.text,
+          "berat_produk": beratController.text,
+          "stok_produk": stokController.text,
+          "harga_produk": hargaProdukController.text,
+          "deskripsi_produk": deskripsiProdukController.text,
+          "img1": gambar,
+        }),
       );
-    } else {
-      // If the server did not return a 200 OK response,
-      // then throw an exception.throw Exception(response.body);
+      
+      if (!mounted) return; // Cek apakah context masih aktif
+      
+      if (response.statusCode == 200) {
+        // Tampilkan dialog sukses
+        showDialog(
+          context: context,
+          builder: (BuildContext context) => AlertDialog(
+            title: const Text('Pesan'),
+            content: const Text(
+              'Data Berhasil disimpan, Silahkan kembali ke Menu Utama',
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // Tutup dialog
+                  Navigator.of(context).pop(); // Kembali ke halaman sebelumnya
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        throw Exception('Gagal menyimpan data: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
     }
   }
 }

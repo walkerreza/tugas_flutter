@@ -1,5 +1,5 @@
 // Base URLs
-const bool isProduction = false; // Ganti ke true untuk production
+const bool isProduction = true; // Ganti ke true untuk production
 
 // API Configuration
 const String localBaseUrl = 'http://127.0.0.1:8000/api';

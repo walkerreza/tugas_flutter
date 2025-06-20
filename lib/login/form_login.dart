@@ -117,7 +117,7 @@ class _PageLoginState extends State<PageLogin>
               TextButton(
                 child: const Text(
                   'Ok',
-                  style: TextStyle(color: Colors.deepPurple),
+                  style: TextStyle(color: Color.fromARGB(255, 58, 183, 75)),
                 ),
                 onPressed: () => Navigator.of(context).pop(),
               ),
@@ -148,7 +148,7 @@ class _PageLoginState extends State<PageLogin>
             TextButton(
               child: const Text(
                 'Ok',
-                style: TextStyle(color: Colors.deepPurple),
+                style: TextStyle(color: Color.fromARGB(255, 58, 183, 75)),
               ),
               onPressed: () => Navigator.of(context).pop(),
             ),
@@ -170,10 +170,10 @@ class _PageLoginState extends State<PageLogin>
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Colors.deepPurple.shade800,
-                  Colors.deepPurple.shade300,
-                  Colors.indigo.shade400,
-                  Colors.blue.shade600,
+                  const Color.fromARGB(255, 39, 160, 55),
+                  const Color.fromARGB(255, 20, 80, 28),
+                  const Color.fromARGB(255, 39, 160, 140),
+                  const Color.fromARGB(255, 44, 156, 72),
                 ],
                 stops: const [0.1, 0.4, 0.7, 0.9],
               ),
@@ -188,7 +188,7 @@ class _PageLoginState extends State<PageLogin>
               width: 200,
               height: 200,
               decoration: BoxDecoration(
-                color: Colors.purple.withOpacity(0.3),
+                color: const Color.fromARGB(255, 39, 176, 92).withOpacity(0.3),
                 shape: BoxShape.circle,
               ),
             ),
@@ -486,7 +486,7 @@ class _PageLoginState extends State<PageLogin>
                                                   },
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor:
-                                                  Colors.deepPurple.shade300,
+                                                  const Color.fromARGB(255, 120, 180, 85),
                                               foregroundColor: Colors.white,
                                               padding:
                                                   const EdgeInsets.symmetric(
@@ -497,7 +497,7 @@ class _PageLoginState extends State<PageLogin>
                                                     BorderRadius.circular(15),
                                               ),
                                               elevation: 5,
-                                              shadowColor: Colors.deepPurple
+                                              shadowColor: const Color.fromARGB(255, 58, 127, 183)
                                                   .withOpacity(0.5),
                                             ),
                                             child: _isLoading
