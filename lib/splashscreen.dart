@@ -49,27 +49,9 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     
     _fadeController.forward();
     
-    // Timer untuk navigasi langsung ke HomePage
-    Timer(const Duration(seconds: 3), () {
-      Navigator.pushReplacement(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => HomePage(
-            id: 0,
-            name: '',
-            email: '',
-            type: '',
-          ),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            var begin = const Offset(1.0, 0.0);
-            var end = Offset.zero;
-            var curve = Curves.easeInOutQuart;
-            var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-            return SlideTransition(position: animation.drive(tween), child: child);
-          },
-          transitionDuration: const Duration(milliseconds: 800),
-        ),
-      );
+    // Panggil checkLoginStatus setelah animasi berjalan selama beberapa detik
+    Timer(const Duration(seconds: 5), () {
+      checkLoginStatus();
     });
   }
   
@@ -91,7 +73,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
       if (!mounted) return;
 
-      if (id != null && name != null && email != null && type != null) {
+      if (name != null) {
         Navigator.pushReplacement(
           context,
           PageRouteBuilder(

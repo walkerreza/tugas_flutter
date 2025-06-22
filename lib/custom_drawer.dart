@@ -1,227 +1,113 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// CustomDrawer dengan tampilan yang lebih modern dan menarik
-class CustomDrawer extends StatefulWidget {
-  final String? name;
-  final String? email;
-  final bool isAdmin;
-  final VoidCallback onLogout;
-  final VoidCallback onAddProduct;
+import 'package:baru/admin/PesananaAdmin.dart';
+import 'package:baru/admin/pengiriman_page.dart';
+import 'package:baru/admin/Laporan.dart';
+import 'package:baru/admin/kategori.dart';
+import 'package:baru/admin/rekening.dart';
+import 'package:baru/admin/tambah_produk.dart';
+import 'package:baru/home_page.dart';
+import 'package:baru/login/form_login.dart';
+import 'package:baru/chat_page.dart';
 
-  const CustomDrawer({
-    super.key, 
-    this.name, 
-    this.email, 
-    required this.isAdmin,
-    required this.onLogout,
-    required this.onAddProduct,
-  });
-
-  @override
-  State<CustomDrawer> createState() => _CustomDrawerState();
-}
-
-class _CustomDrawerState extends State<CustomDrawer> {
-  String? type;
-
-  @override
-  void initState() {
-    super.initState();
-    getUser();
-  }
-
-  void getUser() async {
-    SharedPreferences sp = await SharedPreferences.getInstance();
-    setState(() {
-      type = sp.getString("type");
-    });
-  }
+class CustomDrawer extends StatelessWidget {
+  const CustomDrawer({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      elevation: 5,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topRight: Radius.circular(20),
-          bottomRight: Radius.circular(20),
-        ),
-      ),
-      child: Column(
-        children: [
-          // Header dengan profil pengguna
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
-            decoration: const BoxDecoration(
-              color: Color(0xFFFF5B5B),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-              ),
-            ),
-            child: Row(
-              children: [
-                // Avatar pengguna
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.person,
-                      size: 35,
-                      color: Color(0xFFFF5B5B),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 15),
-                // Informasi pengguna
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.name ?? "Guest User",
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                          color: Colors.white,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        widget.email ?? "guest@example.com",
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w300,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // Menu items
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              children: [
-                // Home
-                _buildMenuItem(
-                  icon: Icons.home_rounded,
-                  title: "Home",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/home");
-                  },
-                ),
-                
-                // Login
-                _buildMenuItem(
-                  icon: Icons.login_rounded,
-                  title: "Login",
-                  onTap: () {
-                    Navigator.pushNamed(context, "/login");
-                  },
-                ),
-                
-                // Tambah Barang (hanya untuk admin)
-                if (widget.isAdmin)
-                  _buildMenuItem(
-                    icon: Icons.add_circle_rounded,
-                    title: "Tambah Barang",
-                    onTap: widget.onAddProduct,
-                  ),
-                
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  child: Divider(height: 1),
-                ),
-                
-                // Logout
-                _buildMenuItem(
-                  icon: Icons.logout_rounded,
-                  title: "Log Out",
-                  onTap: widget.onLogout,
-                ),
-              ],
-            ),
-          ),
-          
-          // Footer
-          Container(
-            padding: const EdgeInsets.all(20),
-            child: const Text(
-              "App Version 1.0.0",
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey,
-              ),
-            ),
-          ),
-        ],
+      child: FutureBuilder<Map<String, String?>>(
+        future: _getUserData(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final userData = snapshot.data ?? {};
+          final name = userData['name'];
+          final email = userData['email'];
+
+          return _buildAdminDrawer(context, name, email);
+        },
       ),
     );
   }
-  
-  // Helper method untuk membuat item menu dengan tampilan yang konsisten
-  Widget _buildMenuItem({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
+
+  Widget _buildAdminDrawer(BuildContext context, String? name, String? email) {
+    final adminName = name ?? 'Admin';
+    return ListView(
+      padding: EdgeInsets.zero,
+      children: [
+        UserAccountsDrawerHeader(
+          accountName: Text(adminName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          accountEmail: Text(email ?? 'admin@example.com'),
+          currentAccountPicture: CircleAvatar(
+            backgroundColor: Colors.white,
+            child: Text(adminName.isNotEmpty ? adminName[0].toUpperCase() : 'A', style: TextStyle(fontSize: 40.0, color: Colors.blue[600])),
           ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF0F0),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  icon,
-                  color: const Color(0xFFFF5B5B),
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: 15),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 16,
-                ),
-              ),
-            ],
+          decoration: BoxDecoration(
+            color: Colors.blue[600],
           ),
         ),
-      ),
+        _createDrawerItem(context, icon: Icons.storefront_outlined, text: 'Produk', page: const HomePage()),
+                _createDrawerItem(context, icon: Icons.shopping_cart_outlined, text: 'Pesanan', page: const PesananAdminPage()),
+                _createDrawerItem(context, icon: Icons.category_outlined, text: 'Kategori', page: const KategoriPage()),
+        _createDrawerItem(context, icon: Icons.account_balance_wallet_outlined, text: 'Rekening', page: const RekeningPage()),
+                _createDrawerItem(context, icon: Icons.receipt_long_outlined, text: 'Laporan', page: const LaporanPage()),
+        _createDrawerItem(context, icon: Icons.local_shipping_outlined, text: 'Pengiriman', page: const PengirimanPage()),
+                _createDrawerItem(context, icon: Icons.add_box_outlined, text: 'Tambah Produk', page: const AddProduk()),
+        const Divider(),
+        _createDrawerItem(context, icon: Icons.chat_bubble_outline, text: 'Live Chat', page: const ChatPage()),
+        ListTile(
+          leading: const Icon(Icons.logout, color: Colors.red),
+          title: const Text('Logout', style: TextStyle(color: Colors.red)),
+          onTap: () => _logout(context),
+        ),
+      ],
     );
+  }
+
+  Widget _createDrawerItem(BuildContext context, {required IconData icon, required String text, required Widget page}) {
+    final destinationPageName = page.runtimeType.toString();
+    final currentPageName = ModalRoute.of(context)?.settings.name;
+
+    return ListTile(
+      leading: Icon(icon),
+      title: Text(text),
+      selected: currentPageName == destinationPageName,
+      selectedTileColor: Colors.blue.withOpacity(0.1),
+      onTap: () {
+        Navigator.pop(context);
+        if (currentPageName != destinationPageName) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => page,
+              settings: RouteSettings(name: destinationPageName),
+            ),
+          );
+        }
+      },
+    );
+  }
+
+  Future<Map<String, String?>> _getUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      'name': prefs.getString('name'),
+      'email': prefs.getString('email'),
+    };
+  }
+
+  void _logout(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+    if (context.mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const PageLogin()),
+        (Route<dynamic> route) => false,
+      );
+    }
   }
 }

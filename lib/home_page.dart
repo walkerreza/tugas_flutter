@@ -5,12 +5,13 @@ import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:baru/model/produk.dart';
-import 'package:baru/edit/edit_Form.dart';
+import 'package:baru/admin/edit_Form.dart';
 // import 'package:baru/login/form_login.dart';
-import 'package:baru/admin/tambah_produk.dart';
 import 'package:baru/custom_drawer.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:baru/bottomNavigation.dart';
+// import 'package:baru/user/MyOrder/LihatPesanan.dart';
+import 'package:baru/user/riwayatPesanan.dart';
+import 'package:baru/user/detailProduk.dart';
 
 // HomePage widget untuk menampilkan halaman utama aplikasi
 class HomePage extends StatefulWidget {
@@ -33,33 +34,38 @@ class _HomePageState extends State<HomePage> {
   List<ProdukResponModel> _filteredProducts = [];
   final TextEditingController _searchController = TextEditingController();
   String _sortValue = "Terbaru";
-  
+
   @override
   void initState() {
     super.initState();
     _loadData();
     getTypeValue();
   }
-  
+
   void _loadData() async {
     _allProducts = await fetchData();
     _filteredProducts = _allProducts;
     setState(() {});
   }
-  
+
   void _filterProducts(String query) {
     setState(() {
       _searchQuery = query;
       if (query.isEmpty) {
         _filteredProducts = _allProducts;
       } else {
-        _filteredProducts = _allProducts
-            .where((product) => product.namaProduk!.toLowerCase().contains(query.toLowerCase()))
-            .toList();
+        _filteredProducts =
+            _allProducts
+                .where(
+                  (product) => product.namaProduk!.toLowerCase().contains(
+                    query.toLowerCase(),
+                  ),
+                )
+                .toList();
       }
     });
   }
-  
+
   void _sortProducts(String value) {
     setState(() {
       _sortValue = value;
@@ -68,16 +74,24 @@ class _HomePageState extends State<HomePage> {
           _filteredProducts.sort((a, b) => b.idProduk!.compareTo(a.idProduk!));
           break;
         case "Harga Terendah":
-          _filteredProducts.sort((a, b) => a.hargaProduk!.compareTo(b.hargaProduk!));
+          _filteredProducts.sort(
+            (a, b) => a.hargaProduk!.compareTo(b.hargaProduk!),
+          );
           break;
         case "Harga Tertinggi":
-          _filteredProducts.sort((a, b) => b.hargaProduk!.compareTo(a.hargaProduk!));
+          _filteredProducts.sort(
+            (a, b) => b.hargaProduk!.compareTo(a.hargaProduk!),
+          );
           break;
         case "Nama A-Z":
-          _filteredProducts.sort((a, b) => a.namaProduk!.compareTo(b.namaProduk!));
+          _filteredProducts.sort(
+            (a, b) => a.namaProduk!.compareTo(b.namaProduk!),
+          );
           break;
         case "Nama Z-A":
-          _filteredProducts.sort((a, b) => b.namaProduk!.compareTo(a.namaProduk!));
+          _filteredProducts.sort(
+            (a, b) => b.namaProduk!.compareTo(a.namaProduk!),
+          );
           break;
       }
     });
@@ -90,35 +104,36 @@ class _HomePageState extends State<HomePage> {
         centerTitle: true,
         title: const Text(
           'Belanja Hemat dan Mudah',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        backgroundColor: const Color(0xFFFF5B5B),
+        backgroundColor: Colors.blue[600],
         elevation: 0,
         actions: [
-          if (!isAdmin) IconButton(
-            icon: const Icon(Icons.favorite_border, color: Colors.white),
-            onPressed: () {},
-          ),
+          if (!isAdmin)
+            IconButton(
+              icon: Icon(
+                Icons.history,
+                size: 30,
+                color: Colors.white,
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const riwayatPesanan(),
+                  ),
+                );
+              },
+            ),
         ],
       ),
-      drawer: CustomDrawer(
-        name: name,
-        email: email,
-        isAdmin: isAdmin,
-        onLogout: logOut,
-        onAddProduct: () {
-          Navigator.of(context).push(MaterialPageRoute(builder: (context) => const AddProduk()));
-        },
-      ),
+      drawer: isAdmin ? const CustomDrawer() : null,
       body: Column(
         children: [
           // Search Bar
           Container(
             padding: const EdgeInsets.all(16),
-            color: const Color(0xFFFF5B5B),
+            color: Colors.blue[600],
             child: Column(
               children: [
                 Container(
@@ -165,69 +180,87 @@ class _HomePageState extends State<HomePage> {
                                 top: Radius.circular(20),
                               ),
                             ),
-                            builder: (context) => Container(
-                              padding: const EdgeInsets.all(20),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Filter Produk',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 20),
-                                  const Text(
-                                    'Urutkan berdasarkan:',
-                                    style: TextStyle(fontWeight: FontWeight.w500),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Wrap(
-                                    spacing: 10,
+                            builder:
+                                (context) => Container(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      'Terbaru',
-                                      'Harga Terendah',
-                                      'Harga Tertinggi',
-                                      'Nama A-Z',
-                                      'Nama Z-A',
-                                    ].map((option) => ChoiceChip(
-                                          label: Text(option),
-                                          selected: _sortValue == option,
-                                          selectedColor: const Color(0xFFFF5B5B).withOpacity(0.2),
-                                          onSelected: (selected) {
-                                            if (selected) {
-                                              Navigator.pop(context);
-                                              _sortProducts(option);
-                                            }
-                                          },
-                                        )).toList(),
-                                  ),
-                                  const SizedBox(height: 20),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFFFF5B5B),
-                                        padding: const EdgeInsets.symmetric(vertical: 15),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(30),
-                                        ),
-                                      ),
-                                      onPressed: () => Navigator.pop(context),
-                                      child: const Text(
-                                        'Terapkan Filter',
+                                      const Text(
+                                        'Filter Produk',
                                         style: TextStyle(
-                                          color: Colors.white,
                                           fontWeight: FontWeight.bold,
+                                          fontSize: 18,
                                         ),
                                       ),
-                                    ),
+                                      const SizedBox(height: 20),
+                                      const Text(
+                                        'Urutkan berdasarkan:',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Wrap(
+                                        spacing: 10,
+                                        children:
+                                            [
+                                                  'Terbaru',
+                                                  'Harga Terendah',
+                                                  'Harga Tertinggi',
+                                                  'Nama A-Z',
+                                                  'Nama Z-A',
+                                                ]
+                                                .map(
+                                                  (option) => ChoiceChip(
+                                                    label: Text(option),
+                                                    selected:
+                                                        _sortValue == option,
+                                                    selectedColor: const Color(
+                                                      0xFFFF5B5B,
+                                                    ).withOpacity(0.2),
+                                                    onSelected: (selected) {
+                                                      if (selected) {
+                                                        Navigator.pop(context);
+                                                        _sortProducts(option);
+                                                      }
+                                                    },
+                                                  ),
+                                                )
+                                                .toList(),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: const Color(
+                                              0xFFFF5B5B,
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 15,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(30),
+                                            ),
+                                          ),
+                                          onPressed:
+                                              () => Navigator.pop(context),
+                                          child: const Text(
+                                            'Terapkan Filter',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                            ),
+                                ),
                           );
                         },
                       ),
@@ -247,10 +280,7 @@ class _HomePageState extends State<HomePage> {
               children: [
                 const Text(
                   'Semua Produk',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 DropdownButton<String>(
                   value: _sortValue,
@@ -261,72 +291,90 @@ class _HomePageState extends State<HomePage> {
                       _sortProducts(newValue);
                     }
                   },
-                  items: <String>[
-                    'Terbaru',
-                    'Harga Terendah',
-                    'Harga Tertinggi',
-                    'Nama A-Z',
-                    'Nama Z-A',
-                  ].map<DropdownMenuItem<String>>((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
+                  items:
+                      <String>[
+                        'Terbaru',
+                        'Harga Terendah',
+                        'Harga Tertinggi',
+                        'Nama A-Z',
+                        'Nama Z-A',
+                      ].map<DropdownMenuItem<String>>((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
                 ),
               ],
             ),
           ),
           // Product Grid
           Expanded(
-            child: _allProducts.isEmpty
-                ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF5B5B)))
-                : _filteredProducts.isEmpty
-                    ? const Center(child: Text('Tidak ada produk yang ditemukan'))
+            child:
+                _allProducts.isEmpty
+                    ? const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFFF5B5B),
+                      ),
+                    )
+                    : _filteredProducts.isEmpty
+                    ? const Center(
+                      child: Text('Tidak ada produk yang ditemukan'),
+                    )
                     : GridView.builder(
-                        padding: const EdgeInsets.all(16),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 0.7,
-                          crossAxisSpacing: 20,
-                          mainAxisSpacing: 20,
-                        ),
-                        itemCount: _filteredProducts.length,
-                        itemBuilder: (context, index) {
-                          var product = _filteredProducts[index];
-                          var gambar = product.fotoProduk.toString();
-                          return Card(
-                            elevation: 3,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(15),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Product Image
-                                Stack(
-                                  children: [
-                                    ClipRRect(
-                                      borderRadius: const BorderRadius.only(
-                                        topLeft: Radius.circular(15),
-                                        topRight: Radius.circular(15),
-                                      ),
-                                      child: Image.network(
-                                        '$gambarUrl/produk/$gambar',
-                                        height: 140,
-                                        width: double.infinity,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) {
-                                          return Container(
-                                            height: 140,
-                                            color: Colors.grey[200],
-                                            child: const Center(child: Icon(Icons.image_not_supported)),
-                                          );
-                                        },
-                                      ),
+                      padding: const EdgeInsets.all(16),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 0.7,
+                            crossAxisSpacing: 20,
+                            mainAxisSpacing: 20,
+                          ),
+                      itemCount: _filteredProducts.length,
+                      itemBuilder: (context, index) {
+                        var product = _filteredProducts[index];
+                        var gambar = product.fotoProduk.toString();
+                        return Card(
+                          elevation: 3,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Product Image
+                              Stack(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: const BorderRadius.only(
+                                      topLeft: Radius.circular(15),
+                                      topRight: Radius.circular(15),
                                     ),
-                                    // Favorite Button hanya untuk non-admin
-                                    if (!isAdmin) Positioned(
+                                    child: Image.network(
+                                      '$gambarUrl/$gambar?v=${DateTime.now().millisecondsSinceEpoch}',
+                                      height: 140,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (
+                                        context,
+                                        error,
+                                        stackTrace,
+                                      ) {
+                                        return Container(
+                                          height: 140,
+                                          color: Colors.grey[200],
+                                          child: const Center(
+                                            child: Icon(
+                                              Icons.image_not_supported,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  // Favorite Button hanya untuk non-admin
+                                  if (!isAdmin)
+                                    Positioned(
                                       top: 8,
                                       right: 8,
                                       child: Container(
@@ -335,252 +383,235 @@ class _HomePageState extends State<HomePage> {
                                           shape: BoxShape.circle,
                                           boxShadow: [
                                             BoxShadow(
-                                              color: Colors.black.withOpacity(0.1),
+                                              color: Colors.black.withOpacity(
+                                                0.1,
+                                              ),
                                               blurRadius: 5,
                                               offset: const Offset(0, 2),
                                             ),
                                           ],
                                         ),
-                                        child: IconButton(
-                                          icon: SvgPicture.asset(
-                                            'assets/images/heart_icon.svg',
-                                            width: 20,
-                                            height: 20,
-                                          ),
-                                          iconSize: 20,
-                                          onPressed: () {},
-                                          constraints: const BoxConstraints(
-                                            minHeight: 36,
-                                            minWidth: 36,
-                                          ),
-                                          padding: EdgeInsets.zero,
-                                        ),
+                                        // child: IconButton(
+                                        //   icon: SvgPicture.asset(
+                                        //     'assets/images/heart_icon.svg',
+                                        //     width: 20,
+                                        //     height: 20,
+                                        //   ),
+                                        //   iconSize: 20,
+                                        //   onPressed: () {},
+                                        //   constraints: const BoxConstraints(
+                                        //     minHeight: 36,
+                                        //     minWidth: 36,
+                                        //   ),
+                                        //   padding: EdgeInsets.zero,
+                                        // ),
                                       ),
                                     ),
-                                    // Removed discount badge
-                                  ],
-                                ),
-                                // Product Details
-                                Padding(
-                                  padding: const EdgeInsets.all(14),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      // Category
-                                      Text(
-                                        product.namaKategori ?? 'Kategori',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[600],
+                                  // Removed discount badge
+                                ],
+                              ),
+                              // Product Details
+                              Flexible(
+                                child: SingleChildScrollView(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(14),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        // Category
+                                        Text(
+                                          product.namaKategori ?? 'Kategori',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey[600],
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      // Product Name
-                                      Text(
-                                        product.namaProduk.toString(),
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
+                                        const SizedBox(height: 4),
+                                        // Product Name
+                                        Text(
+                                          product.namaProduk.toString(),
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      // Price
-                                      Text(
-                                        'Rp ${product.hargaProduk}',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                          color: Color(0xFFFF5B5B),
+                                        const SizedBox(height: 4),
+                                        // Price
+                                        Text(
+                                          'Rp ${product.hargaProduk}',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                            color: Color(0xFFFF5B5B),
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      // Rating Stars
-                                      Row(
-                                        children: [
-                                          Row(
-                                            children: List.generate(
-                                              5,
-                                              (i) => Icon(
-                                                i < (index % 5 + 3) ? Icons.star : Icons.star_border,
-                                                color: Colors.amber,
-                                                size: 14,
+                                        const SizedBox(height: 8),
+                                        // Rating Stars
+                                        Row(
+                                          children: [
+                                            Row(
+                                              children: List.generate(
+                                                5,
+                                                (i) => Icon(
+                                                  i < (index % 5 + 3)
+                                                      ? Icons.star
+                                                      : Icons.star_border,
+                                                  color: Colors.amber,
+                                                  size: 14,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            '${(index % 5 + 3)}.0',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey[600],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 8),
-                                      // Stock
-                                      Text(
-                                        'Stok: ${product.stok}',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[600],
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      // Add to Cart Button hanya untuk non-admin
-                                      if (!isAdmin) Container(
-                                        width: double.infinity,
-                                        height: 36,
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFFF5B5B),
-                                          borderRadius: BorderRadius.circular(18),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: const Color(0xFFFF5B5B).withOpacity(0.3),
-                                              blurRadius: 8,
-                                              offset: const Offset(0, 2),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              '${(index % 5 + 3)}.0',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[600],
+                                              ),
                                             ),
                                           ],
                                         ),
-                                        child: Material(
-                                          color: Colors.transparent,
-                                          child: InkWell(
-                                            onTap: () {
-                                              // Add to cart functionality
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(
-                                                  content: Text('${product.namaProduk} ditambahkan ke keranjang'),
-                                                  backgroundColor: const Color(0xFFFF5B5B),
-                                                  duration: const Duration(seconds: 2),
+                                        const SizedBox(height: 8),
+                                        // Stock
+                                        Text(
+                                          'Stok: ${product.stok}',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        // Add to Cart Button hanya untuk non-admin
+                                        if (!isAdmin)
+                                          Container(
+                                            width: double.infinity,
+                                            height: 36,
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFFF5B5B),
+                                              borderRadius:
+                                                  BorderRadius.circular(18),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: const Color(
+                                                    0xFFFF5B5B,
+                                                  ).withOpacity(0.3),
+                                                  blurRadius: 8,
+                                                  offset: const Offset(0, 2),
                                                 ),
-                                              );
-                                            },
-                                            borderRadius: BorderRadius.circular(18),
-                                            child: Center(
-                                              child: Row(
-                                                mainAxisAlignment: MainAxisAlignment.center,
-                                                children: [
-                                                  SvgPicture.asset(
-                                                    'assets/images/add_icon.svg',
-                                                    width: 16,
-                                                    height: 16,
-                                                    colorFilter: const ColorFilter.mode(
-                                                      Colors.white,
-                                                      BlendMode.srcIn,
+                                              ],
+                                            ),
+                                            child: Material(
+                                              color: Colors.transparent,
+                                              child: InkWell(
+                                                onTap: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (context) =>
+                                                          DetailProdukPage(
+                                                        idProduk: product
+                                                            .idProduk
+                                                            .toString(),
+                                                      ),
                                                     ),
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  const Text(
-                                                    'Add to Cart',
+                                                  );
+                                                },
+                                                borderRadius:
+                                                    BorderRadius.circular(18),
+                                                child: const Center(
+                                                  child: Text(
+                                                    'View Detail',
                                                     style: TextStyle(
                                                       color: Colors.white,
                                                       fontSize: 12,
-                                                      fontWeight: FontWeight.bold,
+                                                      fontWeight:
+                                                          FontWeight.bold,
                                                     ),
                                                   ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      if (isAdmin == true) ...[
-                                        const SizedBox(height: 8),
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                          children: [
-                                            Container(
-                                              decoration: BoxDecoration(
-                                                color: Colors.white,
-                                                borderRadius: BorderRadius.circular(8),
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: Colors.black.withOpacity(0.1),
-                                                    blurRadius: 3,
-                                                    offset: const Offset(0, 1),
-                                                  ),
-                                                ],
-                                              ),
-                                              child: IconButton(
-                                                onPressed: () {
-                                                  var idBarang = product.idProduk.toString();
-                                                  goEdit(idBarang);
-                                                },
-                                                icon: const Icon(Icons.edit, color: Color(0xFFFF5B5B), size: 20),
-                                                padding: const EdgeInsets.all(8),
-                                                constraints: const BoxConstraints(),
-                                                tooltip: 'Edit Produk',
-                                              ),
-                                            ),
-                                            const SizedBox(width: 16),
-                                            Container(
-                                              decoration: BoxDecoration(
-                                                color: Colors.white,
-                                                borderRadius: BorderRadius.circular(8),
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: Colors.black.withOpacity(0.1),
-                                                    blurRadius: 3,
-                                                    offset: const Offset(0, 1),
-                                                  ),
-                                                ],
-                                              ),
-                                              child: IconButton(
-                                                onPressed: () {
-                                                  var idBarang = product.idProduk.toString();
-                                                  delete(idBarang);
-                                                },
-                                                icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-                                                padding: const EdgeInsets.all(8),
-                                                constraints: const BoxConstraints(),
-                                                tooltip: 'Hapus Produk',
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ] else ...[
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.end,
-                                          children: [
-                                            Container(
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xFFFF5B5B),
-                                                borderRadius: BorderRadius.circular(15),
-                                              ),
-                                              child: IconButton(
-                                                onPressed: () {},
-                                                icon: const Icon(Icons.add, color: Colors.white, size: 20),
-                                                padding: EdgeInsets.zero,
-                                                constraints: const BoxConstraints(
-                                                  minHeight: 30,
-                                                  minWidth: 30,
                                                 ),
                                               ),
                                             ),
-                                          ],
-                                        ),
+                                          ),
+                                        if (isAdmin == true) ...[
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.end,
+                                            children: [
+                                              IconButton(
+                                                icon: const Icon(
+                                                  Icons.edit,
+                                                  color: Color(0xFFFF5B5B),
+                                                ),
+                                                tooltip: 'Edit Produk',
+                                                onPressed: () {
+                                                  var idBarang =
+                                                      product.idProduk
+                                                          .toString();
+                                                  goEdit(idBarang);
+                                                },
+                                              ),
+                                              IconButton(
+                                                icon: const Icon(
+                                                  Icons.delete,
+                                                  color: Colors.red,
+                                                ),
+                                                tooltip: 'Hapus Produk',
+                                                onPressed: () {
+                                                  var idBarang =
+                                                      product.idProduk
+                                                          .toString();
+                                                  delete(idBarang);
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                        ] else ...[
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.end,
+                                            children: [
+                                              Container(
+                                                decoration: BoxDecoration(
+                                                  color: const Color(
+                                                    0xFFFF5B5B,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(15),
+                                                ),
+                                                child: IconButton(
+                                                  onPressed: () {},
+                                                  icon: const Icon(
+                                                    Icons.add,
+                                                    color: Colors.white,
+                                                    size: 20,
+                                                  ),
+                                                  padding: EdgeInsets.zero,
+                                                  constraints:
+                                                      const BoxConstraints(
+                                                        minHeight: 30,
+                                                        minWidth: 30,
+                                                      ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
                                       ],
-                                    ],
+                                    ),
                                   ),
                                 ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
           ),
         ],
-      ),
-      // Bottom Navigation Bar
-      bottomNavigationBar: BottomNavigationWidget(
-        currentIndex: 0,
-        isAdmin: isAdmin,
-        onTap: (index) {
-          // Implementasi navigasi berdasarkan index
-          // TODO: Tambahkan navigasi ke halaman yang sesuai
-        },
       ),
     );
   }
@@ -597,9 +628,8 @@ class _HomePageState extends State<HomePage> {
       );
       if (response.statusCode == 200) {
         List data = jsonDecode(response.body);
-        List<ProdukResponModel> produkList = data
-            .map((e) => ProdukResponModel.fromJson(e))
-            .toList();
+        List<ProdukResponModel> produkList =
+            data.map((e) => ProdukResponModel.fromJson(e)).toList();
         _allProducts = produkList;
         _filteredProducts = _allProducts;
         _sortProducts(_sortValue);
@@ -629,9 +659,9 @@ class _HomePageState extends State<HomePage> {
     } catch (e) {
       print('Error getting user type: $e');
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error getting user type: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error getting user type: $e')));
       }
     }
   }
@@ -678,32 +708,42 @@ class _HomePageState extends State<HomePage> {
   Future<void> delete(String idBarang) async {
     try {
       // Tampilkan dialog konfirmasi sebelum menghapus
-      bool confirmDelete = await showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Konfirmasi Hapus'),
-            content: const Text("Apakah Anda yakin ingin menghapus produk ini?"),
-            actions: <Widget>[
-              TextButton(
-                child: const Text('Batal', style: TextStyle(color: Colors.grey)),
-                onPressed: () {
-                  Navigator.of(context).pop(false);
-                },
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF5B5B),
+      bool confirmDelete =
+          await showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text('Konfirmasi Hapus'),
+                content: const Text(
+                  "Apakah Anda yakin ingin menghapus produk ini?",
                 ),
-                child: const Text('Hapus', style: TextStyle(color: Colors.white)),
-                onPressed: () {
-                  Navigator.of(context).pop(true);
-                },
-              ),
-            ],
-          );
-        },
-      ) ?? false;
+                actions: <Widget>[
+                  TextButton(
+                    child: const Text(
+                      'Batal',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).pop(false);
+                    },
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF5B5B),
+                    ),
+                    child: const Text(
+                      'Hapus',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).pop(true);
+                    },
+                  ),
+                ],
+              );
+            },
+          ) ??
+          false;
 
       if (!confirmDelete) return;
 
@@ -712,7 +752,7 @@ class _HomePageState extends State<HomePage> {
       );
       if (response.statusCode == 200) {
         if (!mounted) return; // Cek apakah context masih aktif
-        
+
         // Tampilkan snackbar sebagai pengganti dialog
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -721,7 +761,7 @@ class _HomePageState extends State<HomePage> {
             duration: Duration(seconds: 2),
           ),
         );
-        
+
         // Refresh data setelah menghapus
         _loadData();
       } else {
@@ -730,7 +770,7 @@ class _HomePageState extends State<HomePage> {
     } catch (error) {
       print(error);
       if (!mounted) return;
-      
+
       // Tampilkan pesan error
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

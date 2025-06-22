@@ -19,7 +19,8 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.8.1
+  # sdk: ^3.8.1 # Versi asli, gunakan saat Flutter sudah di-upgrade
+  sdk: '>=3.7.2 <4.0.0'
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -38,6 +39,7 @@ dependencies:
   shared_preferences: ^2.5.3
   image_picker: ^1.1.2
   flutter_svg: ^2.0.10+1
+  intl: ^0.19.0
 
 dev_dependencies:
   flutter_test:

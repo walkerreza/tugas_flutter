@@ -4,9 +4,11 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:baru/home_Page.dart';
+import 'package:baru/user/user_main_page.dart';
 import 'package:flutter/services.dart';
 import 'dart:ui';
 import 'package:baru/constants.dart';
+import 'package:baru/login/form_register.dart';
 
 /// PageLogin adalah kelas utama untuk halaman login
 /// Menampilkan form login dengan UI yang menarik dan animasi
@@ -71,12 +73,18 @@ class _PageLoginState extends State<PageLogin>
         // Mengambil data user
         final user = json.decode(response.body)['user'];
 
-        // Menyimpan data user ke SharedPreferences
+        // Mengambil cookie dari response header
+        final String? rawCookie = response.headers['set-cookie'];
+
+        // Menyimpan data user dan cookie ke SharedPreferences
         SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setInt('id', user['id']);
         await prefs.setString('name', user['name']);
         await prefs.setString('email', user['email']);
         await prefs.setString('type', user['type']);
+        if (rawCookie != null) {
+          await prefs.setString('cookie', rawCookie);
+        }
 
         // Konversi id ke String
         String id = user['id'].toString();
@@ -87,19 +95,31 @@ class _PageLoginState extends State<PageLogin>
         // Pastikan widget masih mounted sebelum pindah halaman
         if (!mounted) return;
 
-        // Berpindah halaman dengan animasi
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(
-            builder: (context) => HomePage(
-              id: int.parse(id),
-              name: name,
-              email: email,
-              type: type,
+        // Pindah halaman berdasarkan tipe user
+        if (type == 'admin') {
+          // Navigasi untuk Admin
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (context) => HomePage(
+                id: int.parse(id),
+                name: name,
+                email: email,
+                type: type,
+              ),
             ),
-          ),
-          (route) => false,
-        );
+            (route) => false,
+          );
+        } else {
+          // Navigasi untuk User Biasa
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const UserMainPage(),
+            ),
+            (route) => false,
+          );
+        }
       } else {
         // Tampilkan dialog error dengan animasi
         showDialog(
@@ -531,7 +551,37 @@ class _PageLoginState extends State<PageLogin>
                         ),
                       ),
 
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Belum punya akun?',
+                            style: TextStyle(color: Colors.white.withOpacity(0.8)),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const PageRegister()),
+                              );
+                            },
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                            ),
+                            child: const Text(
+                              'Daftar di sini',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                decoration: TextDecoration.underline,
+                                decorationColor: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
                       Text(
                         ' 2024 Dapur Anita',
                         style: TextStyle(

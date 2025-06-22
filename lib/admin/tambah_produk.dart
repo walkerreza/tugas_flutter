@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:baru/model/kategori.dart';
 import 'package:baru/home_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 class AddProduk extends StatefulWidget {
 const AddProduk({super.key});
 @override
@@ -26,7 +27,6 @@ class _AddProdukState extends State<AddProduk> {
   @override
   void initState() {
     super.initState();
-    ambilKategori();
   }
 
   @override
@@ -153,20 +153,15 @@ class _AddProdukState extends State<AddProduk> {
   }
 
   Future<List<KategoriModel>> ambilKategori() async {
-    try {
-      final response = await http.get(Uri.parse('$baseUrl/kategoriApi'));
-      if (response.statusCode == 200) {
-        List data = jsonDecode(response.body);
-        return data.map((e) => KategoriModel.fromJson(e)).toList();
-      } else {
-        throw Exception('Gagal memuat data: ${response.statusCode}');
-      }
-    } catch (e) {
-      if (!mounted) return [];
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal memuat kategori: $e')),
-      );
-      return [];
+    final response = await http.get(Uri.parse('$baseUrl/kategoriApi'));
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      List<KategoriModel> kategoriList = (data as List)
+          .map((item) => KategoriModel.fromJson(item))
+          .toList();
+      return kategoriList;
+    } else {
+      throw Exception('Gagal memuat data kategori');
     }
   }
 
@@ -260,6 +255,14 @@ class _AddProdukState extends State<AddProduk> {
       );
 
       final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/storeApi'));
+
+      // Tambahkan header untuk memastikan respons JSON dan mengirim cookie
+      request.headers['Accept'] = 'application/json';
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? cookie = prefs.getString('cookie');
+      if (cookie != null) {
+        request.headers['cookie'] = cookie;
+      }
 
       request.fields['nama_produk'] = namaProdukController.text;
       request.fields['kategori_produk'] = _valKategori!;
