@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:baru/custom_drawer.dart';
+import 'package:baru/model/pengiriman.dart';
+import 'package:baru/constants.dart';
 
 class PengirimanPage extends StatefulWidget {
   const PengirimanPage({super.key});
@@ -9,19 +12,30 @@ class PengirimanPage extends StatefulWidget {
 }
 
 class _PengirimanPageState extends State<PengirimanPage> {
-  // Data dummy, untuk diganti dengan data dari API
-  final List<Pengiriman> _data = List.generate(
-    15, // Contoh 15 data
-    (index) => Pengiriman(
-      id: '${100 + index}',
-      produk: 'Produk Pesanan ${index + 1}',
-      quantity: (index % 3) + 1,
-      pengiriman: 'GoSend Same Day',
-      invoice: 'INV/20250622/${100 + index}',
-      status: ['Dikemas', 'Dikirim', 'Tiba di Tujuan'][index % 3],
-      tanggalOrder: DateTime.now().subtract(Duration(days: index, hours: index * 2)),
-    ),
-  );
+  late Future<List<Pesanan>> _futurePesanan;
+
+  @override
+  void initState() {
+    super.initState();
+    _futurePesanan = _fetchPesananDikirim();
+  }
+
+  Future<List<Pesanan>> _fetchPesananDikirim() async {
+        final response = await http.get(Uri.parse('$baseUrl/pesanan/dikirim'));
+
+    // DEBUG: Cetak status code dan body respons
+    print('DIKIRIM - Status Code: ${response.statusCode}');
+    print('DIKIRIM - Response Body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final pesananList = pesananFromJson(response.body);
+      // DEBUG: Cetak jumlah data yang berhasil di-parse
+      print('DIKIRIM - Parsed Data Count: ${pesananList.length}');
+      return pesananList;
+    } else {
+      throw Exception('Gagal memuat pesanan dikirim');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,55 +45,45 @@ class _PengirimanPageState extends State<PengirimanPage> {
         backgroundColor: Colors.blue[600],
       ),
       drawer: const CustomDrawer(),
-      body: SizedBox(
-        width: double.infinity,
-        child: SingleChildScrollView(
-          child: PaginatedDataTable(
-            header: const Text('Daftar Pengiriman'),
-            rowsPerPage: 8,
-            columns: const [
-              DataColumn(label: Text('ID')),
-              DataColumn(label: Text('Produk')),
-              DataColumn(label: Text('Quantity')),
-              DataColumn(label: Text('Pengiriman')),
-              DataColumn(label: Text('Invoice')),
-              DataColumn(label: Text('Status')),
-              DataColumn(label: Text('Tanggal Order')),
-            ],
-            source: PengirimanDataSource(data: _data),
-          ),
-        ),
+      body: FutureBuilder<List<Pesanan>>(
+        future: _futurePesanan,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text('Tidak ada data pengiriman.'));
+          } else {
+            return SizedBox(
+              width: double.infinity,
+              child: SingleChildScrollView(
+                child: PaginatedDataTable(
+                  header: const Text('Daftar Pengiriman'),
+                  rowsPerPage: 10,
+                  columns: const [
+                    DataColumn(label: Text('ID Pesanan')),
+                    DataColumn(label: Text('Produk')),
+                    DataColumn(label: Text('Qty')),
+                    DataColumn(label: Text('Invoice')),
+                    DataColumn(label: Text('Status')),
+                    DataColumn(label: Text('Tgl Order')),
+                  ],
+                  source: PesananDataSource(data: snapshot.data!),
+                ),
+              ),
+            );
+          }
+        },
       ),
     );
   }
 }
 
-// Model data untuk Pengiriman
-class Pengiriman {
-  final String id;
-  final String produk;
-  final int quantity;
-  final String pengiriman;
-  final String invoice;
-  final String status;
-  final DateTime tanggalOrder;
+class PesananDataSource extends DataTableSource {
+  final List<Pesanan> data;
 
-  Pengiriman({
-    required this.id,
-    required this.produk,
-    required this.quantity,
-    required this.pengiriman,
-    required this.invoice,
-    required this.status,
-    required this.tanggalOrder,
-  });
-}
-
-// DataTableSource untuk PaginatedDataTable
-class PengirimanDataSource extends DataTableSource {
-  final List<Pengiriman> data;
-
-  PengirimanDataSource({required this.data});
+  PesananDataSource({required this.data});
 
   @override
   DataRow? getRow(int index) {
@@ -89,33 +93,32 @@ class PengirimanDataSource extends DataTableSource {
     final item = data[index];
 
     return DataRow(cells: [
-      DataCell(Text(item.id)),
-      DataCell(Text(item.produk)),
-      DataCell(Text(item.quantity.toString())),
-      DataCell(Text(item.pengiriman)),
-      DataCell(Text(item.invoice)),
+      DataCell(Text(item.idPesanan.toString())),
+      DataCell(Text(item.namaProduk ?? 'N/A')),
+      DataCell(Text(item.quantity?.toString() ?? '0')),
+      DataCell(Text(item.invoice ?? 'N/A')),
       DataCell(Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: _getStatusColor(item.status),
+          color: _getStatusColor(item.getStatusString()),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
-          item.status,
+          item.getStatusString(),
           style: const TextStyle(color: Colors.white, fontSize: 12),
         ),
       )),
-      DataCell(Text('${item.tanggalOrder.day}/${item.tanggalOrder.month}/${item.tanggalOrder.year}')),
+      DataCell(Text(item.tanggalOrder != null ? '${item.tanggalOrder!.day}/${item.tanggalOrder!.month}/${item.tanggalOrder!.year}' : 'N/A')),
     ]);
   }
 
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'Dikemas':
+      case 'Diproses':
         return Colors.blue;
       case 'Dikirim':
         return Colors.orange;
-      case 'Tiba di Tujuan':
+      case 'Selesai':
         return Colors.green;
       default:
         return Colors.grey;
@@ -131,3 +134,4 @@ class PengirimanDataSource extends DataTableSource {
   @override
   int get selectedRowCount => 0;
 }
+

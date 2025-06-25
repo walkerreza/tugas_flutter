@@ -570,35 +570,35 @@ class _HomePageState extends State<HomePage> {
                                             ],
                                           ),
                                         ] else ...[
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.end,
-                                            children: [
-                                              Container(
-                                                decoration: BoxDecoration(
-                                                  color: const Color(
-                                                    0xFFFF5B5B,
-                                                  ),
-                                                  borderRadius:
-                                                      BorderRadius.circular(15),
-                                                ),
-                                                child: IconButton(
-                                                  onPressed: () {},
-                                                  icon: const Icon(
-                                                    Icons.add,
-                                                    color: Colors.white,
-                                                    size: 20,
-                                                  ),
-                                                  padding: EdgeInsets.zero,
-                                                  constraints:
-                                                      const BoxConstraints(
-                                                        minHeight: 30,
-                                                        minWidth: 30,
-                                                      ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
+                                          // Row(
+                                          //   mainAxisAlignment:
+                                          //       MainAxisAlignment.end,
+                                          //   children: [
+                                          //     Container(
+                                          //       decoration: BoxDecoration(
+                                          //         color: const Color(
+                                          //           0xFFFF5B5B,
+                                          //         ),
+                                          //         borderRadius:
+                                          //             BorderRadius.circular(15),
+                                          //       ),
+                                          //       child: IconButton(
+                                          //         onPressed: () {},
+                                          //         icon: const Icon(
+                                          //           Icons.add,
+                                          //           color: Colors.white,
+                                          //           size: 20,
+                                          //         ),
+                                          //         padding: EdgeInsets.zero,
+                                          //         constraints:
+                                          //             const BoxConstraints(
+                                          //               minHeight: 30,
+                                          //               minWidth: 30,
+                                          //             ),
+                                          //       ),
+                                          //     ),
+                                          //   ],
+                                          // ),
                                         ],
                                       ],
                                     ),

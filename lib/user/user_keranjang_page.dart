@@ -1,24 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../services/keranjang_service.dart';
+import '../model/keranjang_model.dart';
+import '../constants.dart';
+import 'MyOrder/checkout.dart';
 
-// Model untuk item di keranjang
-class CartItem {
-  final String id;
-  final String imageUrl;
-  final String name;
-  final double price;
-  int quantity;
-
-  CartItem({
-    required this.id,
-    required this.imageUrl,
-    required this.name,
-    required this.price,
-    this.quantity = 1,
-  });
-
-  double get total => price * quantity;
-}
 
 class UserKeranjangPage extends StatefulWidget {
   const UserKeranjangPage({super.key});
@@ -28,43 +14,76 @@ class UserKeranjangPage extends StatefulWidget {
 }
 
 class _UserKeranjangPageState extends State<UserKeranjangPage> {
-  // Data dummy, nantinya diganti dengan data dari state management/API
-  final List<CartItem> _cartItems = [
-    CartItem(
-      id: 'p1',
-      name: 'Nastar Nanas',
-      imageUrl: 'https://via.placeholder.com/150', // Ganti dengan URL gambar produk asli
-      price: 56160,
-      quantity: 1,
-    ),
-    CartItem(
-      id: 'p2',
-      name: 'Kue Coklat Premium',
-      imageUrl: 'https://via.placeholder.com/150', // Ganti dengan URL gambar produk asli
-      price: 45000,
-      quantity: 2,
-    ),
-  ];
+  final KeranjangService _keranjangService = KeranjangService();
+  Future<List<KeranjangItem>>? _keranjangFuture;
 
-  final currencyFormatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
-
-  void _updateQuantity(CartItem item, String newQuantityStr) {
-    final newQuantity = int.tryParse(newQuantityStr);
-    if (newQuantity != null && newQuantity > 0) {
-      setState(() {
-        item.quantity = newQuantity;
-      });
-    }
+  @override
+  void initState() {
+    super.initState();
+    _fetchKeranjang();
   }
 
-  void _removeItem(CartItem item) {
+  void _fetchKeranjang() {
     setState(() {
-      _cartItems.removeWhere((cartItem) => cartItem.id == item.id);
+      _keranjangFuture = _keranjangService.getKeranjang();
     });
   }
 
-  double get _grandTotal {
-    return _cartItems.fold(0.0, (sum, item) => sum + item.total);
+
+
+  void _updateQuantity(int idKeranjang, String quantity) {
+    final int? newQuantity = int.tryParse(quantity);
+    if (newQuantity == null || newQuantity <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Masukkan kuantitas yang valid.'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    _keranjangService.updateItemQuantity(idKeranjang, newQuantity).then((_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Kuantitas berhasil diperbarui.'), backgroundColor: Colors.green),
+      );
+      _fetchKeranjang();
+    }).catchError((error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString()), backgroundColor: Colors.red),
+      );
+    });
+  }
+
+  void _deleteItem(int idKeranjang) {
+    showDialog(
+      context: context,
+      builder: (BuildContext ctx) {
+        return AlertDialog(
+          title: const Text('Konfirmasi Hapus'),
+          content: const Text('Apakah Anda yakin ingin menghapus item ini dari keranjang?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Batal'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                _keranjangService.deleteItem(idKeranjang).then((_) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Item berhasil dihapus.'), backgroundColor: Colors.green),
+                  );
+                  _fetchKeranjang();
+                }).catchError((error) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(error.toString()), backgroundColor: Colors.red),
+                  );
+                });
+              },
+              child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -72,11 +91,28 @@ class _UserKeranjangPageState extends State<UserKeranjangPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Keranjang Saya'),
-        backgroundColor: Colors.blue[600],
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _fetchKeranjang,
+            tooltip: 'Muat Ulang',
+          ),
+        ],
       ),
-      body: _cartItems.isEmpty
-          ? _buildEmptyCart()
-          : SingleChildScrollView(
+      body: FutureBuilder<List<KeranjangItem>>(
+        future: _keranjangFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(
+              child: Text('Gagal memuat keranjang: ${snapshot.error}'),
+            );
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return _buildEmptyCart();
+          } else {
+            final items = snapshot.data!;
+            return SingleChildScrollView(
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Card(
@@ -88,21 +124,32 @@ class _UserKeranjangPageState extends State<UserKeranjangPage> {
                       child: DataTable(
                         columnSpacing: 20,
                         columns: const [
-                          DataColumn(label: Text('Produk', style: TextStyle(fontWeight: FontWeight.bold))),
+                          DataColumn(label: Text('Product', style: TextStyle(fontWeight: FontWeight.bold))),
                           DataColumn(label: Text('Harga', style: TextStyle(fontWeight: FontWeight.bold))),
-                          DataColumn(label: Text('Kuantitas', style: TextStyle(fontWeight: FontWeight.bold))),
+                          DataColumn(label: Text('Quantity', style: TextStyle(fontWeight: FontWeight.bold))),
                           DataColumn(label: Text('Total', style: TextStyle(fontWeight: FontWeight.bold))),
                           DataColumn(label: Text('Checkout', style: TextStyle(fontWeight: FontWeight.bold))),
                           DataColumn(label: Text('Hapus', style: TextStyle(fontWeight: FontWeight.bold))),
                         ],
-                        rows: _cartItems.map((item) => _buildCartItemRow(item)).toList(),
+                        rows: items.map((item) => _buildCartItemRow(context, item)).toList(),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-      bottomNavigationBar: _cartItems.isEmpty ? null : _buildSummaryAndCheckout(),
+            );
+          }
+        },
+      ),
+      bottomNavigationBar: FutureBuilder<List<KeranjangItem>>(
+        future: _keranjangFuture,
+        builder: (context, snapshot) {
+          if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+            return _buildSummaryAndCheckout(context, snapshot.data!);
+          }
+          return const SizedBox.shrink();
+        },
+      ),
     );
   }
 
@@ -111,44 +158,39 @@ class _UserKeranjangPageState extends State<UserKeranjangPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.shopping_cart_outlined,
-            size: 80,
-            color: Colors.grey,
-          ),
+          Icon(Icons.shopping_cart_outlined, size: 80, color: Colors.grey),
           SizedBox(height: 20),
-          Text(
-            'Keranjang Anda kosong',
-            style: TextStyle(fontSize: 22, color: Colors.grey),
-          ),
-          SizedBox(height: 10),
-          Text(
-            'Ayo, isi dengan produk favoritmu!',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16, color: Colors.grey),
-          ),
+          Text('Keranjang Anda kosong', style: TextStyle(fontSize: 22, color: Colors.grey)),
         ],
       ),
     );
   }
 
-  DataRow _buildCartItemRow(CartItem item) {
+  DataRow _buildCartItemRow(BuildContext context, KeranjangItem item) {
+    final currencyFormatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
     final quantityController = TextEditingController(text: item.quantity.toString());
     quantityController.selection = TextSelection.fromPosition(TextPosition(offset: quantityController.text.length));
+    final total = item.hargaProduk * item.quantity;
 
     return DataRow(
       cells: [
         DataCell(
           Row(
             children: [
-              // Ganti Image.network dengan placeholder untuk mengatasi error di desktop
-              const Icon(Icons.image_outlined, size: 40, color: Colors.grey),
+              Image.network('$gambarUrl/${item.fotoProduk}', width: 40, height: 40, fit: BoxFit.cover, errorBuilder: (c, o, s) => const Icon(Icons.error)),
               const SizedBox(width: 10),
-              Text(item.name),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(item.namaProduk, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(item.namaKategori, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                ],
+              ),
             ],
           ),
         ),
-        DataCell(Text(currencyFormatter.format(item.price))),
+        DataCell(Text(currencyFormatter.format(item.hargaProduk))),
         DataCell(
           Row(
             children: [
@@ -159,31 +201,33 @@ class _UserKeranjangPageState extends State<UserKeranjangPage> {
                   controller: quantityController,
                   keyboardType: TextInputType.number,
                   textAlign: TextAlign.center,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.zero,
-                  ),
+                  decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.zero),
                 ),
               ),
               const SizedBox(width: 8),
               ElevatedButton(
-                onPressed: () => _updateQuantity(item, quantityController.text),
+                onPressed: () => _updateQuantity(item.idKeranjang, quantityController.text),
                 child: const Text('Perbarui'),
               ),
             ],
           ),
         ),
-        DataCell(Text(currencyFormatter.format(item.total))),
+        DataCell(Text(currencyFormatter.format(total))),
         DataCell(
           TextButton(
-            onPressed: () { /* TODO: Navigasi ke checkout item ini */ },
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => CheckoutPage(cartItems: [item])),
+              );
+            },
             child: const Text('Checkout →'),
           ),
         ),
         DataCell(
           IconButton(
             icon: const Icon(Icons.delete, color: Colors.red),
-            onPressed: () => _removeItem(item),
+            onPressed: () => _deleteItem(item.idKeranjang),
             tooltip: 'Hapus item',
           ),
         ),
@@ -191,35 +235,26 @@ class _UserKeranjangPageState extends State<UserKeranjangPage> {
     );
   }
 
-  Widget _buildSummaryAndCheckout() {
+  Widget _buildSummaryAndCheckout(BuildContext context, List<KeranjangItem> items) {
+    final currencyFormatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+    final double totalAmount = items.fold(0, (sum, item) => sum + (item.quantity * item.hargaProduk));
+
     return Container(
       padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.3),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, -3),
-          ),
-        ],
-      ),
+      decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.3), spreadRadius: 1, blurRadius: 5, offset: const Offset(0, -3))]),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            'Total: ${currencyFormatter.format(_grandTotal)}',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
+          Text('Total: ${currencyFormatter.format(totalAmount)}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ElevatedButton(
-            onPressed: () { /* TODO: Navigasi ke halaman checkout utama */ },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-              textStyle: const TextStyle(fontSize: 16, color: Colors.white),
-            ),
-            child: const Text('Checkout Semua'),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => CheckoutPage(cartItems: items)),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12)),
+            child: const Text('Checkout Semua', style: TextStyle(fontSize: 16, color: Colors.white)),
           ),
         ],
       ),

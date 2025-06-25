@@ -1,20 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:baru/services/rekening_service.dart';
 import 'package:baru/custom_drawer.dart';
-
-// Model untuk data rekening
-class Rekening {
-  final String id;
-  String namaPemilik;
-  String jenisBank;
-  String nomorRekening;
-
-  Rekening({
-    required this.id,
-    required this.namaPemilik,
-    required this.jenisBank,
-    required this.nomorRekening,
-  });
-}
+import 'package:baru/model/rekening.dart';
 
 class RekeningPage extends StatefulWidget {
   const RekeningPage({super.key});
@@ -30,17 +17,16 @@ class _RekeningPageState extends State<RekeningPage> {
   String? _selectedBank;
 
   final List<String> _bankList = ['BNI', 'BSI', 'MANDIRI', 'BRI', 'BCA'];
+  late Future<List<RekeningModel>> _rekeningFuture;
+  RekeningModel? _rekeningDiedit;
 
-  // Data dummy
-  final List<Rekening> _rekeningList = [
-    Rekening(id: '#K0-5', namaPemilik: 'Sina', jenisBank: 'BSI', nomorRekening: '12828723'),
-    Rekening(id: '#K0-4', namaPemilik: 'Tata', jenisBank: 'MANDIRI', nomorRekening: '232893841'),
-    Rekening(id: '#K0-3', namaPemilik: 'Mabok', jenisBank: 'BRI', nomorRekening: '2893938'),
-    Rekening(id: '#K0-2', namaPemilik: 'Ari', jenisBank: 'BCA', nomorRekening: '90232839743'),
-    Rekening(id: '#K0-1', namaPemilik: 'Rizki Ratih 2', jenisBank: 'BNI', nomorRekening: '081877236012'),
-  ];
+  // Instance RekeningService dibuat per panggilan untuk memastikan tidak ada state yang tersisa.
 
-  Rekening? _rekeningDiedit;
+  @override
+  void initState() {
+    super.initState();
+    _rekeningFuture = RekeningService().getRekening();
+  }
 
   @override
   void dispose() {
@@ -49,28 +35,67 @@ class _RekeningPageState extends State<RekeningPage> {
     super.dispose();
   }
 
-  void _simpanRekening() {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        if (_rekeningDiedit == null) {
-          final newId = '#K0-${_rekeningList.length + 1}';
-          _rekeningList.add(Rekening(
-            id: newId,
-            namaPemilik: _namaController.text,
-            jenisBank: _selectedBank!,
-            nomorRekening: _nomorController.text,
-          ));
-        } else {
-          _rekeningDiedit!.namaPemilik = _namaController.text;
-          _rekeningDiedit!.jenisBank = _selectedBank!;
-          _rekeningDiedit!.nomorRekening = _nomorController.text;
-        }
-        _resetForm();
-      });
+  // --- API Communication ---
+
+  Future<void> _addRekening(String nama, String bank, String nomor) async {
+    try {
+      await RekeningService().addRekening(nama, bank, nomor);
+      if (!mounted) return;
+      _refreshData();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Rekening berhasil ditambahkan'), backgroundColor: Colors.green));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
     }
   }
 
-  void _editRekening(Rekening rekening) {
+  Future<void> _updateRekening(int id, String nama, String bank, String nomor) async {
+    try {
+      await RekeningService().updateRekening(id, nama, bank, nomor);
+      if (!mounted) return;
+      _refreshData();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Rekening berhasil diperbarui'), backgroundColor: Colors.green));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
+    }
+  }
+
+  Future<void> _deleteRekening(int id) async {
+    try {
+      await RekeningService().deleteRekening(id);
+      if (!mounted) return;
+      _refreshData();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Rekening berhasil dihapus'), backgroundColor: Colors.green));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
+    }
+  }
+
+  // --- UI Logic ---
+  void _refreshData() {
+    setState(() {
+      _rekeningFuture = RekeningService().getRekening();
+    });
+  }
+
+  void _simpanRekening() {
+    if (_formKey.currentState!.validate()) {
+      final nama = _namaController.text;
+      final nomor = _nomorController.text;
+      final bank = _selectedBank!;
+
+      if (_rekeningDiedit == null) {
+        _addRekening(nama, bank, nomor);
+      } else {
+        _updateRekening(_rekeningDiedit!.idRekening, nama, bank, nomor);
+      }
+      _resetForm();
+    }
+  }
+
+  void _editRekening(RekeningModel rekening) {
     setState(() {
       _rekeningDiedit = rekening;
       _namaController.text = rekening.namaPemilik;
@@ -79,13 +104,11 @@ class _RekeningPageState extends State<RekeningPage> {
     });
   }
 
-  void _hapusRekening(Rekening rekening) {
-    setState(() {
-      _rekeningList.removeWhere((item) => item.id == rekening.id);
-      if (_rekeningDiedit?.id == rekening.id) {
-        _resetForm();
-      }
-    });
+  void _hapusRekening(int id) {
+    _deleteRekening(id);
+    if (_rekeningDiedit?.idRekening == id) {
+      _resetForm();
+    }
   }
 
   void _resetForm() {
@@ -104,6 +127,9 @@ class _RekeningPageState extends State<RekeningPage> {
       appBar: AppBar(
         title: const Text('Rekening'),
         backgroundColor: Colors.blue[600],
+        actions: [
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _refreshData, tooltip: 'Refresh Data'),
+        ],
       ),
       drawer: const CustomDrawer(),
       body: LayoutBuilder(
@@ -191,39 +217,55 @@ class _RekeningPageState extends State<RekeningPage> {
           children: [
             Text('Data Rekening', style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 16),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                columns: const [
-                  DataColumn(label: Text('ID Rekening')),
-                  DataColumn(label: Text('Nama Pemilik')),
-                  DataColumn(label: Text('Jenis Rekening')),
-                  DataColumn(label: Text('Nomor Rekening')),
-                  DataColumn(label: Text('Aksi')),
-                ],
-                rows: _rekeningList.map((rekening) {
-                  return DataRow(
-                    cells: [
-                      DataCell(Text(rekening.id)),
-                      DataCell(Text(rekening.namaPemilik)),
-                      DataCell(Text(rekening.jenisBank)),
-                      DataCell(Text(rekening.nomorRekening)),
-                      DataCell(
-                        PopupMenuButton(
-                          onSelected: (value) {
-                            if (value == 'edit') _editRekening(rekening);
-                            if (value == 'hapus') _hapusRekening(rekening);
-                          },
-                          itemBuilder: (context) => [
-                            const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                            const PopupMenuItem(value: 'hapus', child: Text('Hapus')),
-                          ],
-                        ),
-                      ),
+            FutureBuilder<List<RekeningModel>>(
+              future: _rekeningFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text('Tidak ada data rekening.'));
+                }
+
+                final rekeningList = snapshot.data!;
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
+                    columns: const [
+                      DataColumn(label: Text('ID')),
+                      DataColumn(label: Text('Nama Pemilik')),
+                      DataColumn(label: Text('Jenis Rekening')),
+                      DataColumn(label: Text('Nomor Rekening')),
+                      DataColumn(label: Text('Aksi')),
                     ],
-                  );
-                }).toList(),
-              ),
+                    rows: rekeningList.map((rekening) {
+                      return DataRow(
+                        cells: [
+                          DataCell(Text(rekening.idRekening.toString())),
+                          DataCell(Text(rekening.namaPemilik)),
+                          DataCell(Text(rekening.jenisBank)),
+                          DataCell(Text(rekening.nomorRekening)),
+                          DataCell(
+                            PopupMenuButton(
+                              onSelected: (value) {
+                                if (value == 'edit') _editRekening(rekening);
+                                if (value == 'hapus') _hapusRekening(rekening.idRekening);
+                              },
+                              itemBuilder: (context) => [
+                                const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                                const PopupMenuItem(value: 'hapus', child: Text('Hapus')),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                );
+              },
             ),
           ],
         ),

@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:baru/admin/PesananaAdmin.dart';
+import 'package:baru/admin/onprogress.dart';
 import 'package:baru/admin/pengiriman_page.dart';
 import 'package:baru/admin/Laporan.dart';
 import 'package:baru/admin/kategori.dart';
 import 'package:baru/admin/rekening.dart';
 import 'package:baru/admin/tambah_produk.dart';
+import 'package:baru/admin/profil_page.dart';
 import 'package:baru/home_page.dart';
 import 'package:baru/login/form_login.dart';
 import 'package:baru/chat_page.dart';
@@ -51,12 +53,14 @@ class CustomDrawer extends StatelessWidget {
           ),
         ),
         _createDrawerItem(context, icon: Icons.storefront_outlined, text: 'Produk', page: const HomePage()),
-                _createDrawerItem(context, icon: Icons.shopping_cart_outlined, text: 'Pesanan', page: const PesananAdminPage()),
-                _createDrawerItem(context, icon: Icons.category_outlined, text: 'Kategori', page: const KategoriPage()),
+                _createDrawerItem(context, icon: Icons.shopping_cart_outlined, text: 'Pesanan Masuk', page: const PesananAdminPage()),
+        _createDrawerItem(context, icon: Icons.sync_outlined, text: 'Pesanan Diproses', page: const OnProgressPage()),
+        _createDrawerItem(context, icon: Icons.local_shipping_outlined, text: 'Pengiriman', page: const PengirimanPage()),
+        _createDrawerItem(context, icon: Icons.category_outlined, text: 'Kategori', page: const KategoriPage()),
         _createDrawerItem(context, icon: Icons.account_balance_wallet_outlined, text: 'Rekening', page: const RekeningPage()),
                 _createDrawerItem(context, icon: Icons.receipt_long_outlined, text: 'Laporan', page: const LaporanPage()),
-        _createDrawerItem(context, icon: Icons.local_shipping_outlined, text: 'Pengiriman', page: const PengirimanPage()),
                 _createDrawerItem(context, icon: Icons.add_box_outlined, text: 'Tambah Produk', page: const AddProduk()),
+        _createDrawerItem(context, icon: Icons.person_outline, text: 'Profil', page: const AdminProfilePage()),
         const Divider(),
         _createDrawerItem(context, icon: Icons.chat_bubble_outline, text: 'Live Chat', page: const ChatPage()),
         ListTile(

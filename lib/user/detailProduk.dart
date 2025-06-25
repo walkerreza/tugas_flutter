@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:baru/constants.dart';
 import 'package:baru/model/produk.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DetailProdukPage extends StatefulWidget {
   final String idProduk;
@@ -15,6 +16,7 @@ class DetailProdukPage extends StatefulWidget {
 
 class _DetailProdukPageState extends State<DetailProdukPage> {
   Future<ProdukResponModel?>? _productFuture;
+  int _quantity = 1;
 
   @override
   void initState() {
@@ -140,7 +142,7 @@ class _DetailProdukPageState extends State<DetailProdukPage> {
             ),
           ),
           bottomNavigationBar: Container(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
@@ -151,31 +153,122 @@ class _DetailProdukPageState extends State<DetailProdukPage> {
                 ),
               ],
             ),
-            child: ElevatedButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${product.namaProduk ?? "Produk"} ditambahkan ke keranjang'),
-                    backgroundColor: const Color(0xFFFF5B5B),
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF5B5B),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    _buildQuantityButton(Icons.remove, () {
+                      if (_quantity > 1) {
+                        setState(() {
+                          _quantity--;
+                        });
+                      }
+                    }),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Text(
+                        '$_quantity',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    _buildQuantityButton(Icons.add, () {
+                      setState(() {
+                        _quantity++;
+                      });
+                    }),
+                  ],
                 ),
-              ),
-              child: const Text(
-                'Add to Cart',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => _addToCartApi(product.idProduk!.toString()),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF5B5B),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                    child: const Text(
+                      'Add to Cart',
+                      style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         );
       },
+    );
+  }
+
+  Future<void> _addToCartApi(String idProduk) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Anda harus login terlebih dahulu.')),
+      );
+      return;
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/keranjang'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'id_produk': idProduk,
+          'quantity': _quantity,
+        }),
+      );
+
+      final responseData = json.decode(response.body);
+
+      if (response.statusCode == 201) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(responseData['message'] ?? 'Berhasil ditambahkan ke keranjang'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(responseData['message'] ?? 'Gagal menambahkan ke keranjang.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Terjadi kesalahan: $e')),
+      );
+    }
+  }
+
+  Widget _buildQuantityButton(IconData icon, VoidCallback onPressed) {
+    return Material(
+      color: Colors.grey[200],
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Icon(icon, size: 20, color: Colors.black87),
+        ),
+      ),
     );
   }
 }

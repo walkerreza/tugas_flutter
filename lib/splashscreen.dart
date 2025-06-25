@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'package:baru/home_page.dart';
+
+import 'package:baru/user/user_main_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math' as math;
 
@@ -66,10 +67,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   Future<void> checkLoginStatus() async {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
-      int? id = prefs.getInt('id');
       String? name = prefs.getString('name');
-      String? email = prefs.getString('email');
-      String? type = prefs.getString('type');
 
       if (!mounted) return;
 
@@ -77,12 +75,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
         Navigator.pushReplacement(
           context,
           PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) => HomePage(
-              id: id,
-              name: name,
-              email: email,
-              type: type,
-            ),
+            pageBuilder: (context, animation, secondaryAnimation) => const UserMainPage(),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               var begin = const Offset(1.0, 0.0);
               var end = Offset.zero;

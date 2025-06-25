@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:async';
@@ -70,20 +71,21 @@ class _PageLoginState extends State<PageLogin>
       });
 
       if (response.statusCode == 200) {
-        // Mengambil data user
-        final user = json.decode(response.body)['user'];
+        // Mendekode seluruh body respons
+        // Mencetak body mentah untuk debugging
+        print('DEBUG: Login response body: ${response.body}');
+        final responseData = json.decode(response.body);
+        final user = responseData['user'];
+        final token = responseData['token'] as String?;
 
-        // Mengambil cookie dari response header
-        final String? rawCookie = response.headers['set-cookie'];
-
-        // Menyimpan data user dan cookie ke SharedPreferences
+        // Menyimpan data user dan token ke SharedPreferences
         SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setInt('id', user['id']);
+        await prefs.setInt('user_id', user['id']);
         await prefs.setString('name', user['name']);
         await prefs.setString('email', user['email']);
         await prefs.setString('type', user['type']);
-        if (rawCookie != null) {
-          await prefs.setString('cookie', rawCookie);
+        if (token != null) {
+          await prefs.setString('token', token);
         }
 
         // Konversi id ke String
